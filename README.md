@@ -2,9 +2,9 @@
 ### Монорепо диванной борьбы
 
 Содержит:
-- [status-page](./status-page/)
+- [status-page](./status-page/)  
 Одностраничник с текущим статусом сервиса
-- ansible (planned)
+- ansible (planned)  
 Плейбуки для быстрого развёртывания сервиса
-- terraform (planned)
+- terraform (planned)  
 Конфиги для быстрого развёртывания ВМ-ок под сервис
