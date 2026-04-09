@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>admin</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="admin-page">
+    <section class="admin-box">
+      <h1>edit message</h1>
+      <form method="POST">
+        <textarea name="content" spellcheck="false">{{ .Content }}</textarea>
+        <div class="admin-actions">
+          <button type="submit">save</button>
+        </div>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

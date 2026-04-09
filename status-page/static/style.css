@@ -1,0 +1,134 @@
+@font-face {
+  font-family: "UbuntuMonoNerdFontMono";
+  src: url("/static/fonts/UbuntuMonoNerdFontMono-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "UbuntuMonoNerdFontMono";
+  src: url("/static/fonts/UbuntuMonoNerdFontMono-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "UbuntuMonoNerdFontMono";
+  src: url("/static/fonts/UbuntuMonoNerdFontMono-Italic.ttf") format("truetype");
+  font-weight: 400;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: "UbuntuMonoNerdFontMono";
+  src: url("/static/fonts/UbuntuMonoNerdFontMono-BoldItalic.ttf") format("truetype");
+  font-weight: 700;
+  font-style: italic;
+}
+
+:root {
+  --fg: #000000;
+  --bg: #ffffff;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "UbuntuMonoNerdFontMono", monospace;
+}
+
+body {
+  min-height: 100vh;
+}
+
+.page-center {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  box-sizing: border-box;
+}
+
+.message {
+  max-width: 860px;
+  width: 100%;
+  text-align: left;
+  line-height: 1.6;
+  font-size: 24px;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  margin-top: 0.8em;
+  margin-bottom: 0.4em;
+}
+
+.markdown-body p,
+.markdown-body ul,
+.markdown-body ol,
+.markdown-body pre,
+.markdown-body blockquote {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-body code,
+.markdown-body pre {
+  font-family: "UbuntuMonoNerdFontMono", monospace;
+}
+
+.markdown-body a {
+  color: inherit;
+}
+
+.admin-page {
+  min-height: 100vh;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.admin-box {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.admin-box h1 {
+  margin-top: 0;
+  font-size: 24px;
+  font-weight: normal;
+}
+
+.admin-box textarea {
+  width: 100%;
+  min-height: 60vh;
+  resize: vertical;
+  box-sizing: border-box;
+  padding: 16px;
+  border: 1px solid #000;
+  background: #fff;
+  color: #000;
+  font-family: "UbuntuMonoNerdFontMono", monospace;
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.admin-actions {
+  margin-top: 12px;
+}
+
+.admin-actions button {
+  border: 1px solid #000;
+  background: #fff;
+  color: #000;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-family: "UbuntuMonoNerdFontMono", monospace;
+  font-size: 16px;
+}
