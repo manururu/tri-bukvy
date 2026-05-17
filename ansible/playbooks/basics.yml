@@ -1,0 +1,12 @@
+---
+- name: Apply basics
+  hosts: all
+  gather_facts: true
+  become: true
+  become_method: ansible.builtin.sudo
+
+  vars:
+    ansible_user: "{{ ansible_deploy_user }}"
+
+  roles:
+    - role: basics

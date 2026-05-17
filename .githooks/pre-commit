@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+vault_files=$(git diff --cached --name-only | grep 'vault\.yml$' || true)
+
+[ -z "$vault_files" ] && exit 0
+
+failed=0
+for f in $vault_files; do
+  if [ -f "$f" ] && ! head -1 "$f" | grep -q '^\$ANSIBLE_VAULT'; then
+    echo "ERROR: $f не зашифрован. Сначала сделай ansible-vault encrypt $f"
+    failed=1
+  fi
+done
+
+exit $failed

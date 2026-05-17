@@ -1,0 +1,20 @@
+---
+dependency:
+  name: galaxy
+  options:
+    requirements-file: ../../../../requirements.yml
+driver:
+  name: docker
+platforms:
+  - name: instance
+    image: debian:bookworm
+    pre_build_image: true
+    command: sleep infinity
+provisioner:
+  name: ansible
+  inventory:
+    host_vars:
+      instance:
+        ansible_user: root
+verifier:
+  name: ansible

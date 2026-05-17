@@ -1,0 +1,7 @@
+---
+- name: Prepare
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Install Python and sudo
+      ansible.builtin.raw: apt-get update -qq && apt-get install -y -qq python3 sudo

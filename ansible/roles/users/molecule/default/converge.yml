@@ -1,0 +1,23 @@
+---
+- name: Converge
+  hosts: all
+  gather_facts: true
+  vars:
+    users_list:
+      - name: mol_plain
+        comment: "Plain test user"
+        shell: /bin/bash
+        groups: []
+
+      - name: mol_sudo
+        comment: "Sudo test user"
+        shell: /bin/bash
+        groups:
+          - sudo
+        sudo_nopasswd: true
+        ssh_keys:
+          - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl test@molecule"
+
+    users_passwords: {}
+  roles:
+    - role: users

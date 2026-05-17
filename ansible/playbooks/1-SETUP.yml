@@ -1,0 +1,5 @@
+# Плейбук, который надо прогнать после самого первого запуска сервера
+# В комментах отключение ворнингов линтера nvim
+---
+- import_playbook: users.yml # noqa: name[play]
+- import_playbook: basics.yml # noqa: name[play]

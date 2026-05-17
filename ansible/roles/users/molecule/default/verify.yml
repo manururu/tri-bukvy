@@ -1,0 +1,78 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Gather passwd entries
+      ansible.builtin.getent:
+        database: passwd
+
+    - name: mol_plain account exists
+      ansible.builtin.assert:
+        that: "'mol_plain' in ansible_facts.getent_passwd"
+
+    - name: mol_sudo account exists
+      ansible.builtin.assert:
+        that: "'mol_sudo' in ansible_facts.getent_passwd"
+
+    - name: mol_sudo shell is /bin/bash
+      ansible.builtin.assert:
+        that: ansible_facts.getent_passwd['mol_sudo'][5] == '/bin/bash'
+
+
+    - name: Stat sudoers file for mol_sudo
+      ansible.builtin.stat:
+        path: /etc/sudoers.d/nopasswd_mol_sudo
+      register: sudoers_sudo
+
+    - name: Sudoers file for mol_sudo exists with mode 0440
+      ansible.builtin.assert:
+        that:
+          - sudoers_sudo.stat.exists
+          - sudoers_sudo.stat.mode == '0440'
+
+    - name: Slurp sudoers file for mol_sudo
+      ansible.builtin.slurp:
+        src: /etc/sudoers.d/nopasswd_mol_sudo
+      register: sudoers_content
+
+    - name: Sudoers file contains correct NOPASSWD rule
+      ansible.builtin.assert:
+        that: "'mol_sudo ALL=(ALL:ALL) NOPASSWD:ALL' in (sudoers_content.content | b64decode)"
+
+    - name: Stat sudoers file for mol_plain
+      ansible.builtin.stat:
+        path: /etc/sudoers.d/nopasswd_mol_plain
+      register: sudoers_plain
+
+    - name: No sudoers file created for mol_plain
+      ansible.builtin.assert:
+        that: not sudoers_plain.stat.exists
+
+
+    - name: Stat authorized_keys for mol_sudo
+      ansible.builtin.stat:
+        path: /home/mol_sudo/.ssh/authorized_keys
+      register: auth_keys_sudo
+
+    - name: authorized_keys exists for mol_sudo
+      ansible.builtin.assert:
+        that: auth_keys_sudo.stat.exists
+
+    - name: Slurp authorized_keys for mol_sudo
+      ansible.builtin.slurp:
+        src: /home/mol_sudo/.ssh/authorized_keys
+      register: auth_keys_content
+
+    - name: SSH key is present in mol_sudo authorized_keys
+      ansible.builtin.assert:
+        that: "'ssh-ed25519' in (auth_keys_content.content | b64decode)"
+
+    - name: Stat authorized_keys for mol_plain
+      ansible.builtin.stat:
+        path: /home/mol_plain/.ssh/authorized_keys
+      register: auth_keys_plain
+
+    - name: No authorized_keys for mol_plain (no keys defined)
+      ansible.builtin.assert:
+        that: not auth_keys_plain.stat.exists

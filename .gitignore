@@ -52,6 +52,7 @@ coverage.out
 
 *.retry
 ansible.log
+.ansible/
 
 ############################
 # terraform

@@ -1,0 +1,3 @@
+ansible-core>=2.17
+molecule>=24.0
+molecule-plugins[docker]>=23.5

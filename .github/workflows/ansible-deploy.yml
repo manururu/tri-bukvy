@@ -1,0 +1,59 @@
+---
+name: "[ansible] Deploy"
+run-name: "[ansible] deploy – ${{ inputs.playbook }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      playbook:
+        description: Playbook to run
+        required: true
+        type: choice
+        options:
+          - SETUP
+          - users
+          - basics
+
+jobs:
+  deploy:
+    name: Run ${{ inputs.playbook }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ansible
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install Ansible
+        run: pip install ansible passlib
+
+      - name: Install Ansible collections
+        run: ansible-galaxy collection install -r requirements.yml
+
+      - name: Write vault password file
+        run: echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > .vault_pass
+
+      - name: Install sshpass
+        if: inputs.playbook == 'users' || inputs.playbook == 'SETUP'
+        run: sudo apt-get install -y --no-install-recommends sshpass
+
+      - name: Add deploy SSH key to agent
+        if: inputs.playbook == 'basics' || inputs.playbook == 'SETUP'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.COMMON_DEPLOY_SSH_KEY }}
+
+      - name: Run playbook
+        run: ansible-playbook playbooks/${{ inputs.playbook }}.yml
+
+      - name: Remove vault password file
+        if: always()
+        run: rm -f .vault_pass

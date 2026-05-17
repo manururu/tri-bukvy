@@ -1,0 +1,21 @@
+---
+users_list:
+  - name: ci
+    comment: "The automator from Github or whatever"
+    shell: /bin/bash
+    groups:
+      - sudo
+    sudo_nopasswd: true
+    ssh_keys:
+      - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA1j/ZfsoYHNFM+qUqrUct/tPCVd08Gib5KwfhWCnCsK ci@github-actions"
+
+  - name: manururu
+    comment: "Literally no idea who that one is"
+    shell: /bin/bash
+    groups:
+      - sudo
+    sudo_nopasswd: false
+    ssh_keys:
+      - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMWA2ck+vjLdhPX2FwfUrCxk5H1GcqAouyW1LFYwlJRD manururu@me"
+
+ansible_deploy_user: ci

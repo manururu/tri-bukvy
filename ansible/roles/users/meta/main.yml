@@ -1,0 +1,7 @@
+---
+galaxy_info:
+  role_name: users
+  description: Creates system users with SSH keys and optional vault-encrypted passwords
+  min_ansible_version: "2.15"
+
+dependencies: []

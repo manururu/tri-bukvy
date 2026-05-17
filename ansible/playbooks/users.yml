@@ -1,0 +1,13 @@
+---
+- name: Bootstrap user accounts
+  hosts: all
+  gather_facts: true
+  become: false
+
+  vars:
+    ansible_user: root
+    ansible_password: "{{ root_password }}"
+    ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
+
+  roles:
+    - role: users

@@ -1,0 +1,31 @@
+---
+- name: Ensure user accounts exist
+  ansible.builtin.user:
+    name: "{{ item.name }}"
+    comment: "{{ item.comment | default('') }}"
+    shell: "{{ item.shell | default('/bin/bash') }}"
+    groups: "{{ item.groups | default([]) }}"
+    append: true
+    password: "{{ users_passwords[item.name] | default(omit) }}"
+    update_password: on_create
+    create_home: true
+    state: present
+  loop: "{{ users_list }}"
+  no_log: true
+
+- name: Add authorized SSH keys
+  ansible.posix.authorized_key:
+    user: "{{ item.0.name }}"
+    key: "{{ item.1 }}"
+    state: present
+  loop: "{{ users_list | subelements('ssh_keys', skip_missing=True) }}"
+
+- name: Grant passwordless sudo to designated users
+  ansible.builtin.template:
+    src: sudoers_nopasswd.j2
+    dest: "/etc/sudoers.d/nopasswd_{{ item.name }}"
+    owner: root
+    group: root
+    mode: "0440"
+    validate: /usr/sbin/visudo -cf %s
+  loop: "{{ users_list | selectattr('sudo_nopasswd', 'defined') | selectattr('sudo_nopasswd') | list }}"

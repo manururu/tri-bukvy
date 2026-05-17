@@ -1,0 +1,6 @@
+---
+basics_timezone: "Europe/Moscow"
+
+basics_ssh_password_authentication: "no"
+basics_ssh_permit_root_login: "no"
+basics_ssh_pubkey_authentication: "yes"

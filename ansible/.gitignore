@@ -1,0 +1,12 @@
+# Pass files
+.vault_pass
+.become_pass
+
+# any vault files
+
+# Retry files
+*.retry
+
+# Python cache
+__pycache__/
+*.pyc

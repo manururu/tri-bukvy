@@ -1,0 +1,7 @@
+---
+galaxy_info:
+  role_name: basics
+  description: Sets timezone and hardens SSH (no password auth, no root login)
+  min_ansible_version: "2.15"
+
+dependencies: []
