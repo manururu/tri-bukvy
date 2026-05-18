@@ -1,6 +1,6 @@
 ---
-name: "[ansible] Deploy"
-run-name: "[ansible] deploy – ${{ inputs.playbook }}"
+name: "[ANSIBLE] Deploy"
+run-name: "[ANSIBLE] deploy – ${{ inputs.playbook }}"
 
 on:
   workflow_dispatch:
@@ -15,8 +15,8 @@ on:
           - basics
 
 jobs:
-  deploy:
-    name: Run ${{ inputs.playbook }}
+  deploy-playbook:
+    name: Run playbook – ${{ inputs.playbook }}
     runs-on: ubuntu-latest
     defaults:
       run:
