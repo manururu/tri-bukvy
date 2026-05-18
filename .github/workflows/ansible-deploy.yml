@@ -41,11 +41,10 @@ jobs:
         run: echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > .vault_pass
 
       - name: Install sshpass
-        if: inputs.playbook == 'users' || inputs.playbook == 'SETUP'
+        if: inputs.playbook == 'SETUP'
         run: sudo apt-get install -y --no-install-recommends sshpass
 
       - name: Add deploy SSH key to agent
-        if: inputs.playbook == 'basics' || inputs.playbook == 'SETUP'
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.COMMON_DEPLOY_SSH_KEY }}
