@@ -1,5 +1,17 @@
 # Плейбук, который надо прогнать после самого первого запуска сервера
 # В комментах отключение ворнингов линтера nvim
 ---
-- import_playbook: users.yml # noqa: name[play]
+- name: Bootstrap user accounts  # noqa: name[play]
+  hosts: all
+  gather_facts: true
+  become: false
+
+  vars:
+    ansible_user: root
+    ansible_password: "{{ root_password }}"
+    ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
+
+  roles:
+    - role: users
+
 - import_playbook: basics.yml # noqa: name[play]

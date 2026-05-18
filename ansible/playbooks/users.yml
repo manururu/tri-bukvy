@@ -1,13 +1,11 @@
 ---
-- name: Bootstrap user accounts
+- name: Update user accounts
   hosts: all
   gather_facts: true
-  become: false
+  become: true
 
   vars:
-    ansible_user: root
-    ansible_password: "{{ root_password }}"
-    ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
+    ansible_user: "{{ ansible_deploy_user }}"
 
   roles:
     - role: users
