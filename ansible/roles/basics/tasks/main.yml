@@ -6,7 +6,6 @@
 - name: Set timezone
   community.general.timezone:
     name: "{{ basics_timezone }}"
-  notify: Restart cron
 
 - name: Deploy SSH hardening drop-in
   ansible.builtin.template:
