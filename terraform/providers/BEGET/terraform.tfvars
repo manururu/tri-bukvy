@@ -10,6 +10,6 @@ servers = {
     ram_mb        = 1024
     disk_mb       = 10240
     cpu_class     = "normal_cpu"
-    software_slug = "ubuntu-24-04"
+    software_slug = "debian-12"
   }
 }

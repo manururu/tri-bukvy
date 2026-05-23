@@ -23,6 +23,6 @@ variable "servers" {
     ram_mb        = optional(number, 1024)
     disk_mb       = optional(number, 10240)
     cpu_class     = optional(string, "normal_cpu")
-    software_slug = optional(string, "ubuntu-24-04")
+    software_slug = optional(string, "debian-12")
   }))
 }
