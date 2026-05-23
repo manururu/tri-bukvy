@@ -35,7 +35,7 @@ jobs:
     env:
       TF_TOKEN_app_terraform_io: ${{ secrets.TERRAFORM_CLOUD_TOKEN }}
       TF_VAR_provider_token: ${{ secrets[format('TERRAFORM_{0}_TOKEN', inputs.provider)] }}
-      TF_VAR_ssh_public_key: ${{ secrets.COMMON_DEPLOY_SSH_PUBLIC_KEY }}
+      TF_VAR_ssh_public_key: ${{ vars.COMMON_DEPLOY_SSH_PUBLIC_KEY }}
 
     steps:
       - name: Checkout
