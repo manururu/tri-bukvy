@@ -1,0 +1,72 @@
+---
+name: "[TERRAFORM] Deploy"
+run-name: "[TERRAFORM] ${{ inputs.action }} – ${{ inputs.provider }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: Cloud provider
+        required: true
+        type: choice
+        options:
+          - BEGET
+      action:
+        description: Action to run
+        required: true
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+      confirm_destroy:
+        description: 'Type "DESTROY" to confirm destruction of all servers at the provider'
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  terraform:
+    name: "${{ inputs.action }} / ${{ inputs.provider }}"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform/providers/${{ inputs.provider }}
+    env:
+      TF_TOKEN_app_terraform_io: ${{ secrets.TERRAFORM_CLOUD_TOKEN }}
+      TF_VAR_provider_token: ${{ secrets[format('TERRAFORM_{0}_TOKEN', inputs.provider)] }}
+      TF_VAR_ssh_public_key: ${{ secrets.COMMON_DEPLOY_SSH_PUBLIC_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Confirm destroy
+        if: inputs.action == 'destroy'
+        run: |
+          if [ "${{ inputs.confirm_destroy }}" != "DESTROY" ]; then
+            echo "To destroy all servers, set confirm_destroy to DESTROY"
+            exit 1
+          fi
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        if: inputs.action == 'plan'
+        run: terraform plan
+
+      - name: Terraform Plan (pre-apply preview)
+        if: inputs.action == 'apply'
+        run: terraform plan
+
+      - name: Terraform Apply
+        if: inputs.action == 'apply'
+        run: terraform apply -auto-approve
+
+      - name: Terraform Destroy
+        if: inputs.action == 'destroy'
+        run: terraform destroy -auto-approve
