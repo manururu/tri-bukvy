@@ -72,32 +72,53 @@ jobs:
       SSH_USER: ${{ vars.STATUS_SSH_USER }}
       SSH_IP: ${{ vars.STATUS_SSH_IP }}
       STATUS_ENV_FILE: ${{ secrets.STATUS_ENV_FILE }}
+      DOMAIN: ${{ secrets.STATUS_DOMAIN }}
+      EMAIL: ${{ secrets.STATUS_DOMAIN_EMAIL }}
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Add deploy SSH key to agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.COMMON_DEPLOY_SSH_KEY }}
 
+      - name: Upload stack files to server
+        run: |
+          tar -C status-page -cf - docker-compose.yaml Caddyfile | \
+            ssh -o StrictHostKeyChecking=accept-new "$SSH_USER@$SSH_IP" \
+              'mkdir -p "$HOME/status-page" && tar -xf - -C "$HOME/status-page"'
+
       - name: Upload env file to server
         run: |
-          printf '%s\n' "$STATUS_ENV_FILE" | \
-            ssh -o StrictHostKeyChecking=accept-new "$SSH_USER@$SSH_IP" \
-              'cat > "$HOME/status-page.env" && chmod 600 "$HOME/status-page.env"'
+          printf '%s\n' \
+            "$STATUS_ENV_FILE" \
+            "DOMAIN=$DOMAIN" \
+            "EMAIL=$EMAIL" \
+            "TAG=$TAG" \
+            | ssh -o StrictHostKeyChecking=accept-new "$SSH_USER@$SSH_IP" \
+              'cat > "$HOME/status-page/.env" && chmod 600 "$HOME/status-page/.env"'
 
-      - name: Deploy container
+      - name: Deploy stack
         run: |
           ssh -o StrictHostKeyChecking=accept-new "$SSH_USER@$SSH_IP" \
-            "TAG=$TAG IMAGE=$IMAGE bash -s" <<'EOF'
+            "bash -s" <<'EOF'
           set -euo pipefail
-          docker pull "$IMAGE:$TAG"
+          cd "$HOME/status-page"
+          # Разовая миграция со старого деплоя (docker run --name status-page), дальше no-op.
           docker rm -f status-page || true
-          docker run -d \
-            --name status-page \
-            --restart unless-stopped \
-            -p 8080:8080 \
-            -v status-page-data:/srv/data \
-            --env-file "$HOME/status-page.env" \
-            "$IMAGE:$TAG"
-          test "$(docker inspect -f '{{.State.Running}}' status-page)" = "true"
+          docker compose pull
+          docker compose up -d --remove-orphans
+          test "$(docker inspect -f '{{.State.Running}}' status-page-app-1)" = "true"
           EOF
+
+      - name: Verify HTTPS
+        run: |
+          # Первый выпуск сертификата Let's Encrypt занимает 10–30 секунд.
+          for i in $(seq 1 20); do
+            curl --fail --silent --show-error --max-time 10 "https://$DOMAIN" && exit 0
+            sleep 5
+          done
+          exit 1
+
