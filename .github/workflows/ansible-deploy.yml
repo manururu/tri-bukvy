@@ -13,8 +13,11 @@ on:
           - SETUP
           - users
           - basics
+          - docker
+
       hosts:
-        description: Host group or pattern to run on (e.g. web, vpn, all). Leave empty to use the playbook's hosts
+        description: Host group or pattern to run on (e.g. web, vpn, all). Leave empty
+          to use the playbook's hosts
         required: false
         type: string
         default: ''
@@ -57,7 +60,8 @@ jobs:
       - name: Run playbook
         env:
           HOSTS_LIMIT: ${{ inputs.hosts }}
-        run: ansible-playbook playbooks/${{ inputs.playbook }}.yml ${HOSTS_LIMIT:+--limit "$HOSTS_LIMIT"}
+        run: ansible-playbook playbooks/${{ inputs.playbook }}.yml
+          ${HOSTS_LIMIT:+--limit "$HOSTS_LIMIT"}
 
       - name: Remove vault password file
         if: always()

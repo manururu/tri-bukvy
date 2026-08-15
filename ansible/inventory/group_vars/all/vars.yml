@@ -18,4 +18,11 @@ users_list:
     ssh_keys:
       - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMWA2ck+vjLdhPX2FwfUrCxk5H1GcqAouyW1LFYwlJRD manururu@me"
 
+  - name: sysop
+    comment: "Service user"
+    shell: /bin/bash
+    ssh_keys:
+      - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA1j/ZfsoYHNFM+qUqrUct/tPCVd08Gib5KwfhWCnCsK ci@github-actions"
+
 ansible_deploy_user: ci
+docker_user: sysop
