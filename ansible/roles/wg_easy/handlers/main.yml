@@ -5,3 +5,5 @@
     state: restarted
     services:
       - caddy
+  become: true
+  become_user: "{{ docker_user }}"

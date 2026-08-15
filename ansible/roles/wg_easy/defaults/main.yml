@@ -1,6 +1,8 @@
 ---
 # Директория стека docker compose (docker_compose_v2 ищет в ней docker-compose.yml).
-wg_easy_dir: /etc/docker/containers/wg-easy
+# Живёт в домашней директории docker_user: стек принадлежит ему, docker compose
+# работает от его имени (become_user), sudo ему не нужен.
+wg_easy_dir: "/home/{{ docker_user }}/wg-easy"
 
 # Образы контейнеров.
 # wg-easy: тег :15 — это v15 (рекомендуемый тег; latest указывает на v14).
