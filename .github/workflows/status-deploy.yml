@@ -2,6 +2,9 @@
 name: Status Page Deploy
 
 on:
+  push:
+    branches:
+      - feature/deploy-status-page
   workflow_dispatch:
 
 permissions:
@@ -121,4 +124,3 @@ jobs:
             sleep 5
           done
           exit 1
-
