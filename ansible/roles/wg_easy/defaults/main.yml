@@ -1,0 +1,26 @@
+---
+# Директория стека docker compose (docker_compose_v2 ищет в ней docker-compose.yml).
+# Живёт в домашней директории docker_user: стек принадлежит ему, docker compose
+# работает от его имени (become_user), sudo ему не нужен.
+wg_easy_dir: "/home/{{ docker_user }}/wg-easy"
+
+# Образы контейнеров.
+# wg-easy: тег :15 — это v15 (рекомендуемый тег; latest указывает на v14).
+wg_easy_image: ghcr.io/wg-easy/wg-easy:15
+wg_easy_caddy_image: caddy:2-alpine
+
+# Публичный домен и email для Let's Encrypt.
+# TODO: задать реальные значения в inventory/host_vars/wgd-kz/vars.yml или здесь;
+# host_vars имеет более высокий приоритет, чем defaults.
+wg_easy_domain: "vpn.example.com"
+wg_easy_email: "admin@example.com"
+
+# Порт UDP WireGuard (публикуется наружу) и порт веб-интерфейса внутри контейнера.
+# Порт веб-интерфейса НЕ публикуется наружу — наружу его отдаёт только Caddy.
+# Первичная настройка wg-easy выполняется вручную через мастер в веб-интерфейсе (без INIT_*).
+wg_easy_wireguard_port: 51820
+wg_easy_ui_port: 80
+
+# true — самоподписанный сертификат Caddy (tls internal) для теста без реального домена;
+# false — авто-HTTPS Let's Encrypt.
+wg_easy_caddy_tls_internal: false

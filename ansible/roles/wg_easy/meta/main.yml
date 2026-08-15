@@ -1,0 +1,8 @@
+---
+galaxy_info:
+  role_name: wg_easy
+  author: manururu
+  description: Deploys wg-easy (WireGuard VPN admin UI) and Caddy reverse proxy as a docker compose stack
+  min_ansible_version: "2.15"
+
+dependencies: []
