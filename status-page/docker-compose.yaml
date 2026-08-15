@@ -1,0 +1,44 @@
+---
+# Стек status-page: приложение + Caddy (авто-HTTPS через Let's Encrypt).
+# Деплоится из CI: файлы стека и .env (ADMIN_*, DOMAIN, EMAIL, TAG) кладём в ~/status-page/.
+name: status-page
+
+services:
+  app:
+    image: ghcr.io/manururu/tri-bukvy/status-page:${TAG:-latest}
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - status-page-data:/srv/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN}
+      EMAIL: ${EMAIL:-}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  # Переиспользуем именованный volume, созданный старым деплоем (docker run -v status-page-data).
+  status-page-data:
+    name: status-page-data
+  # Сертификаты и состояние Caddy живут между пересозданиями контейнера.
+  caddy-data:
+  caddy-config:

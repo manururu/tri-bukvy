@@ -1,0 +1,123 @@
+---
+name: "[status-page] Build, push & deploy"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}/status-page
+
+jobs:
+  build-and-push:
+    name: Build and push
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: status-page
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Image tag (short sha)
+        id: meta
+        run: echo "tag=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: status-page/go.mod
+          cache-dependency-path: status-page/go.sum
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test
+        run: go test ./...
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --tag "${{ env.IMAGE }}:${{ steps.meta.outputs.tag }}" \
+            --tag "${{ env.IMAGE }}:latest" \
+            .
+
+      - name: Push Docker image
+        run: |
+          docker push "${{ env.IMAGE }}:${{ steps.meta.outputs.tag }}"
+          docker push "${{ env.IMAGE }}:latest"
+
+  deploy:
+    name: Deploy to server
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ needs.build-and-push.outputs.tag }}
+      SSH_USER: ${{ vars.STATUS_SSH_USER }}
+      SSH_IP: ${{ vars.STATUS_SSH_IP }}
+      STATUS_ENV_FILE: ${{ secrets.STATUS_ENV_FILE }}
+      DOMAIN: ${{ secrets.STATUS_DOMAIN }}
+      EMAIL: ${{ secrets.STATUS_DOMAIN_EMAIL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Add deploy SSH key to agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.COMMON_DEPLOY_SSH_KEY }}
+
+      - name: Upload stack files to server
+        run: |
+          tar -C status-page -cf - docker-compose.yaml Caddyfile | \
+            ssh -o StrictHostKeyChecking=accept-new "$SSH_USER@$SSH_IP" \
+              'mkdir -p "$HOME/status-page" && tar -xf - -C "$HOME/status-page"'
+
+      - name: Upload env file to server
+        run: |
+          printf '%s\n' \
+            "$STATUS_ENV_FILE" \
+            "DOMAIN=$DOMAIN" \
+            "EMAIL=$EMAIL" \
+            "TAG=$TAG" \
+            | ssh -o StrictHostKeyChecking=accept-new "$SSH_USER@$SSH_IP" \
+              'cat > "$HOME/status-page/.env" && chmod 600 "$HOME/status-page/.env"'
+
+      - name: Deploy stack
+        run: |
+          ssh -o StrictHostKeyChecking=accept-new "$SSH_USER@$SSH_IP" \
+            "bash -s" <<'EOF'
+          set -euo pipefail
+          cd "$HOME/status-page"
+          # Разовая миграция со старого деплоя (docker run --name status-page), дальше no-op.
+          docker rm -f status-page || true
+          docker compose pull
+          docker compose up -d --remove-orphans
+          test "$(docker inspect -f '{{.State.Running}}' status-page-app-1)" = "true"
+          EOF
+
+      - name: Verify HTTPS
+        run: |
+          # Первый выпуск сертификата Let's Encrypt занимает 10–30 секунд.
+          for i in $(seq 1 20); do
+            curl --fail --silent --show-error --max-time 10 "https://$DOMAIN" && exit 0
+            sleep 5
+          done
+          exit 1
