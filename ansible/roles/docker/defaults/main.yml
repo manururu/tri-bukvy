@@ -1,0 +1,5 @@
+---
+# Пользователь, добавляемый в группу docker.
+# По умолчанию — ansible_deploy_user из inventory (ci),
+# от имени которого плейбуки запускаются из GitHub Actions.
+docker_user: "{{ ansible_deploy_user | default('ci') }}"
