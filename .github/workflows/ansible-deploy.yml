@@ -13,6 +13,11 @@ on:
           - SETUP
           - users
           - basics
+      hosts:
+        description: Host group or pattern to run on (e.g. web, vpn, all). Leave empty to use the playbook's hosts
+        required: false
+        type: string
+        default: ''
 
 jobs:
   deploy-playbook:
@@ -50,7 +55,9 @@ jobs:
           ssh-private-key: ${{ secrets.COMMON_DEPLOY_SSH_KEY }}
 
       - name: Run playbook
-        run: ansible-playbook playbooks/${{ inputs.playbook }}.yml
+        env:
+          HOSTS_LIMIT: ${{ inputs.hosts }}
+        run: ansible-playbook playbooks/${{ inputs.playbook }}.yml ${HOSTS_LIMIT:+--limit "$HOSTS_LIMIT"}
 
       - name: Remove vault password file
         if: always()
