@@ -1,0 +1,13 @@
+# {{ ansible_managed }}
+# Авто-HTTPS Let's Encrypt: реальный домен + email. Для теста без домена
+# (wg_easy_caddy_tls_internal: true) будет использован `tls internal`.
+{
+	email {{ wg_easy_email }}
+}
+
+{{ wg_easy_domain }} {
+{%- if wg_easy_caddy_tls_internal %}
+	tls internal
+{%- endif %}
+	reverse_proxy wg-easy:{{ wg_easy_ui_port }}
+}

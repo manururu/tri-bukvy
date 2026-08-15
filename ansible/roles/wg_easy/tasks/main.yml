@@ -1,0 +1,49 @@
+---
+# Деплой стека wg-easy (WireGuard + веб-интерфейс) и Caddy через docker compose.
+# Docker Engine и compose-плагин ставит роль docker; здесь только сам стек.
+# Первичная настройка wg-easy выполняется вручную через мастер веб-интерфейса.
+
+- name: Check Docker Compose plugin availability
+  ansible.builtin.command: docker compose version
+  register: wg_easy_compose_version
+  changed_when: false
+  failed_when: false
+
+- name: Fail if Docker or Compose plugin is missing
+  ansible.builtin.fail:
+    msg: "Docker CLI or Docker Compose plugin is not installed. Run the docker role first."
+  when: wg_easy_compose_version.rc != 0
+
+- name: Create wg-easy compose directory
+  ansible.builtin.file:
+    path: "{{ wg_easy_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Template docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ wg_easy_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Template Caddyfile
+  ansible.builtin.template:
+    src: Caddyfile.j2
+    dest: "{{ wg_easy_dir }}/Caddyfile"
+    owner: root
+    group: root
+    mode: "0644"
+  # Изменение bind-mounted Caddyfile не пересоздаёт контейнер — рестарт caddy
+  # через handler (на первом запуске рестарт только что созданного контейнера безвреден).
+  notify: Restart caddy
+
+- name: Create and start wg-easy compose stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ wg_easy_dir }}"
+    state: present
+    pull: always
+    remove_orphans: true

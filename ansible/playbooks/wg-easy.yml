@@ -1,0 +1,12 @@
+---
+- name: Deploy wg-easy and Caddy
+  hosts: vpn
+  gather_facts: true
+  become: true
+  become_method: ansible.builtin.sudo
+
+  vars:
+    ansible_user: "{{ ansible_deploy_user }}"
+
+  roles:
+    - role: wg_easy
