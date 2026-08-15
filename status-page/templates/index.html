@@ -5,12 +5,42 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>status-page</title>
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="/static/favicon.png" type="image/png">
 </head>
 <body>
   <main class="page-center">
+    {{ if .PingEnabled }}
+    <div class="ping-banner" id="ping-banner" data-state="{{ .PingStatus }}">
+      <span class="ping-ok">🟢 доступен</span>
+      <span class="ping-fail">🔴 недоступен</span>
+      <span class="ping-pending">проверка…</span>
+    </div>
+    {{ end }}
     <article class="message markdown-body">
       {{ .Content }}
     </article>
   </main>
+  {{ if .PingEnabled }}
+  <script>
+  // обновляем плашку сразу и раз в 5 минут через /api/status
+  // (интервал должен совпадать с pingLoop в main.go)
+  (function () {
+    var banner = document.getElementById('ping-banner');
+    if (!banner) return;
+    async function refresh() {
+      try {
+        var res = await fetch('/api/status', { cache: 'no-store' });
+        var data = await res.json();
+        if (data.ok === null || data.ok === undefined) return; // проверка ещё не выполнена
+        banner.dataset.state = data.ok ? 'ok' : 'fail';
+      } catch (e) {
+        // приложение недоступно — оставляем текущий статус, хост тут ни при чём
+      }
+    }
+    refresh();
+    setInterval(refresh, 300000);
+  })();
+  </script>
+  {{ end }}
 </body>
 </html>

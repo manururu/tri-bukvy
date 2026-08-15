@@ -1,6 +1,6 @@
 ---
 # Стек status-page: приложение + Caddy (авто-HTTPS через Let's Encrypt).
-# Деплоится из CI: файлы стека и .env (ADMIN_*, DOMAIN, EMAIL, TAG) кладём в ~/status-page/.
+# Деплоится из CI: файлы стека и .env (ADMIN_*, PING_TARGET, DOMAIN, EMAIL, TAG) кладём в ~/status-page/.
 name: status-page
 
 services:
