@@ -1,0 +1,106 @@
+---
+name: Status Page Deploy
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}/status-page
+
+jobs:
+  build-and-push:
+    name: Build and push
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: status-page
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Image tag (short sha)
+        id: meta
+        run: echo "tag=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: status-page/go.mod
+          cache-dependency-path: status-page/go.sum
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test
+        run: go test ./...
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --tag "${{ env.IMAGE }}:${{ steps.meta.outputs.tag }}" \
+            --tag "${{ env.IMAGE }}:latest" \
+            .
+
+      - name: Push Docker image
+        run: |
+          docker push "${{ env.IMAGE }}:${{ steps.meta.outputs.tag }}"
+          docker push "${{ env.IMAGE }}:latest"
+
+  deploy:
+    name: Deploy to server
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ needs.build-and-push.outputs.tag }}
+      SSH_USER: ${{ vars.STATUS_SSH_USER }}
+      SSH_IP: ${{ vars.STATUS_SSH_IP }}
+      STATUS_ENV_FILE: ${{ secrets.STATUS_ENV_FILE }}
+
+    # Сервер тянет образ анонимно: пакет в GHCR должен быть публичным
+    # (Packages -> status-page -> Package settings -> Change visibility).
+
+    steps:
+      - name: Add deploy SSH key to agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.COMMON_DEPLOY_SSH_KEY }}
+
+      - name: Upload env file to server
+        run: |
+          printf '%s\n' "$STATUS_ENV_FILE" | \
+            ssh -o StrictHostKeyChecking=accept-new "$SSH_USER@$SSH_IP" \
+              'cat > "$HOME/status-page.env" && chmod 600 "$HOME/status-page.env"'
+
+      - name: Deploy container
+        run: |
+          ssh -o StrictHostKeyChecking=accept-new "$SSH_USER@$SSH_IP" \
+            "TAG=$TAG IMAGE=$IMAGE bash -s" <<'EOF'
+          set -euo pipefail
+          docker pull "$IMAGE:$TAG"
+          docker rm -f status-page || true
+          docker run -d \
+            --name status-page \
+            --restart unless-stopped \
+            -p 8080:8080 \
+            -v status-page-data:/srv/data \
+            --env-file "$HOME/status-page.env" \
+            "$IMAGE:$TAG"
+          test "$(docker inspect -f '{{.State.Running}}' status-page)" = "true"
+          EOF
