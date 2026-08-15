@@ -1,0 +1,13 @@
+---
+# URL официального скрипта установки Xray-install (XTLS).
+xray_install_script_url: "https://github.com/XTLS/Xray-install/raw/main/install-release.sh"
+
+# Куда скачивается скрипт перед запуском.
+xray_install_script_path: "/tmp/install-release.sh"
+
+# Время ежедневной ротации логов через logrotate@xray.timer.
+# Формат HH:MM:SS; время меньше 10:00:00 должно начинаться с нуля, напр. 01:23:45.
+xray_logrotate_time: "00:00:00"
+
+# Конкретная версия Xray-core, напр. "v1.8.24"; пусто — ставить/обновлять до последней.
+xray_version: ""

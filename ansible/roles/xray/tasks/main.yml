@@ -1,0 +1,27 @@
+---
+# Установка и обновление Xray-core и geodata (geoip.dat, geosite.dat) официальным
+# скриптом Xray-install: https://github.com/XTLS/Xray-install
+#   install          — Install & Upgrade Xray-core и geodata (повторный запуск обновляет)
+#   --logrotate TIME — плюс ежедневная ротация логов через logrotate@xray.timer
+# Роль не управляет конфигом: при первой установке скрипт кладёт дефолтный
+# /usr/local/etc/xray/config.json, дальше — вручную.
+# Скрипт работает только от root; become задаёт плейбук.
+
+- name: Download Xray install script
+  ansible.builtin.get_url:
+    url: "{{ xray_install_script_url }}"
+    dest: "{{ xray_install_script_path }}"
+    mode: "0755"
+  changed_when: false
+
+- name: Install or upgrade Xray-core with geodata and logrotate
+  ansible.builtin.command:
+    cmd: >-
+      bash {{ xray_install_script_path }} install
+      --logrotate {{ xray_logrotate_time }}
+      {{ '--version ' ~ xray_version if xray_version else '' }}
+  register: xray_install_result
+  # Скрипт выходит с rc 0 и в том случае, когда обновление не нужно.
+  changed_when:
+    - '"No new version" not in xray_install_result.stdout'
+    - '"same as the specified version" not in xray_install_result.stdout'
