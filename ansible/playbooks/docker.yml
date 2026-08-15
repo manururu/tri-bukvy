@@ -1,6 +1,6 @@
 ---
 - name: Install docker
-  hosts: web
+  hosts: docker
   gather_facts: true
   become: true
   become_method: ansible.builtin.sudo
