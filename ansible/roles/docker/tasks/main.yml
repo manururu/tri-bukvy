@@ -1,10 +1,57 @@
 ---
-- name: Install docker.io
+# Установка Docker Engine из официального репозитория Docker.
+# https://docs.docker.com/engine/install/debian/
+# Поддерживается Debian 12 (bookworm) и новее.
+
+- name: Fail on unsupported Debian version
+  ansible.builtin.fail:
+    msg: >-
+      Docker Engine from the official apt repository is supported on
+      Debian 12 (bookworm) or newer, got {{ ansible_distribution }} {{ ansible_distribution_version }}.
+  when: ansible_distribution_major_version | int < 12
+
+- name: Install prerequisites
   ansible.builtin.apt:
-    name: docker.io
+    name:
+      - ca-certificates
+      - curl
     state: present
-    update_cache: true
-  notify: Restart docker
+
+- name: Remove conflicting distro packages
+  ansible.builtin.apt:
+    name:
+      - docker.io
+      - docker-compose
+      - docker-doc
+      - docker-buildx
+      - podman-docker
+      - containerd
+      - runc
+    state: absent
+
+- name: Ensure apt keyrings directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Add Docker's official GPG key
+  ansible.builtin.get_url:
+    url: "{{ docker_gpg_key_url }}"
+    dest: /etc/apt/keyrings/docker.asc
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Add Docker apt repository
+  ansible.builtin.template:
+    src: docker.sources.j2
+    dest: /etc/apt/sources.list.d/docker.sources
+    owner: root
+    group: root
+    mode: "0644"
 
 - name: Collect local users
   ansible.builtin.getent:
@@ -14,6 +61,18 @@
   ansible.builtin.fail:
     msg: "User {{ docker_user }} does not exist on the target host. Create it first, e.g. with the users role."
   when: docker_user not in getent_passwd
+
+- name: Install Docker Engine and plugins
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+    update_cache: true
+  notify: Restart docker
 
 - name: Add docker_user to docker group
   ansible.builtin.user:
