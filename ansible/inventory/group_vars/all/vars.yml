@@ -16,7 +16,8 @@ users_list:
       - sudo
     sudo_nopasswd: false
     ssh_keys:
-      - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMWA2ck+vjLdhPX2FwfUrCxk5H1GcqAouyW1LFYwlJRD manururu@me"
+      - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMWA2ck+vjLdhPX2FwfUrCxk5H1GcqAouyW1LFYwlJRD me@lt"
+      - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDpsxwYS9ISnSsSBokJ8eZrOm2g4WMRUf94kzAgVhlM5 me@pc02"
 
   - name: sysop
     comment: "Service user"
