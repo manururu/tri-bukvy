@@ -1,10 +1,7 @@
 ---
-name: Status Page Deploy
+name: "[status-page] Build, push & deploy"
 
 on:
-  push:
-    branches:
-      - feature/deploy-status-page
   workflow_dispatch:
 
 permissions:
