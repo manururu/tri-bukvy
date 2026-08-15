@@ -2,10 +2,6 @@
 name: Status Page Deploy
 
 on:
-  # TEMP: одноразовый прогон из тестовой ветки — убрать после первого запуска
-  push:
-    branches:
-      - feature/deploy-status-page
   workflow_dispatch:
 
 permissions:
