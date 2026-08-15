@@ -5,6 +5,8 @@
 
 .git/
 Dockerfile
+docker-compose.yaml
+Caddyfile
 contrib/
 
 ##
