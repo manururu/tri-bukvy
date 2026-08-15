@@ -73,9 +73,6 @@ jobs:
       SSH_IP: ${{ vars.STATUS_SSH_IP }}
       STATUS_ENV_FILE: ${{ secrets.STATUS_ENV_FILE }}
 
-    # Сервер тянет образ анонимно: пакет в GHCR должен быть публичным
-    # (Packages -> status-page -> Package settings -> Change visibility).
-
     steps:
       - name: Add deploy SSH key to agent
         uses: webfactory/ssh-agent@v0.9.0
