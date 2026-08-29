@@ -2,12 +2,16 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"html/template"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
+	"time"
 
 	"github.com/yuin/goldmark"
 )
@@ -27,6 +31,12 @@ var (
 	// логин и пароль для basic auth
 	adminUser = os.Getenv("ADMIN_USERNAME")
 	adminPass = os.Getenv("ADMIN_PASSWORD")
+	// адрес хоста для проверки доступности (host:port),
+	// например: PING_TARGET=192.168.1.10:443
+	// если не задан — плашка не показывается, /api/status не регистрируется
+	pingTarget = strings.TrimSpace(os.Getenv("PING_TARGET"))
+	// последний результат проверки (nil, пока проверка не выполнена)
+	pingState atomic.Pointer[PingResult]
 	// порт, на котором запускается сервер
 	listenAddr = ":8080"
 )
@@ -38,7 +48,15 @@ var (
 
 // данные для страницы с сообщением
 type PageData struct {
-	Content template.HTML
+	Content     template.HTML
+	PingEnabled bool   // показывать ли плашку доступности
+	PingStatus  string // "ok", "fail" или "pending"
+}
+
+// результат проверки доступности хоста
+type PingResult struct {
+	OK        bool      // доступен ли хост
+	CheckedAt time.Time // время последней проверки
 }
 
 // данные для админки
@@ -67,6 +85,20 @@ func main() {
 	ensureData()
 
 	//
+	// проверка доступности хоста
+	//
+	if pingTarget != "" {
+		// цель должна быть в формате host:port
+		if _, _, err := net.SplitHostPort(pingTarget); err != nil {
+			log.Fatalf("PING_TARGET must be host:port, got %q: %v", pingTarget, err)
+		}
+		// первая проверка синхронная — статус известен ещё до старта сервера
+		checkPing()
+		// дальше проверяем каждые 5 минут в фоне
+		go pingLoop()
+	}
+
+	//
 	// создаем HTTP router
 	//
 	mux := http.NewServeMux()
@@ -76,6 +108,10 @@ func main() {
 	mux.HandleFunc("/", handleIndex)
 	// админка
 	mux.HandleFunc(adminPath, basicAuth(handleAdmin))
+	// API: текущее состояние проверки (публичное, без авторизации)
+	if pingTarget != "" {
+		mux.HandleFunc("/api/status", handleStatus)
+	}
 
 	log.Printf("listening on %s", listenAddr)
 	log.Printf("admin path configured")
@@ -123,7 +159,9 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	// вставляем HTML в шаблон index.html
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := templates.ExecuteTemplate(w, "index.html", PageData{
-		Content: htmlContent,
+		Content:     htmlContent,
+		PingEnabled: pingTarget != "",
+		PingStatus:  pingStatus(),
 	}); err != nil {
 		http.Error(w, "template error", http.StatusInternalServerError)
 		return
@@ -179,6 +217,51 @@ func renderMarkdown(md []byte) (template.HTML, error) {
 	// помечаем HTML как безопасный,
 	// чтобы template не экранировал его
 	return template.HTML(buf.String()), nil
+}
+
+// возвращает текущий статус: "ok", "fail" или "pending"
+func pingStatus() string {
+	if v := pingState.Load(); v != nil {
+		if v.OK {
+			return "ok"
+		}
+		return "fail"
+	}
+	return "pending"
+}
+
+// одна проверка доступности PING_TARGET по TCP
+func checkPing() {
+	conn, err := net.DialTimeout("tcp", pingTarget, 3*time.Second)
+	if err != nil {
+		pingState.Store(&PingResult{OK: false, CheckedAt: time.Now()})
+		log.Printf("ping %s: unreachable: %v", pingTarget, err)
+		return
+	}
+	conn.Close()
+	pingState.Store(&PingResult{OK: true, CheckedAt: time.Now()})
+	log.Printf("ping %s: reachable", pingTarget)
+}
+
+// фоновая проверка каждые 5 минут
+// (интервал должен совпадать с setInterval в templates/index.html)
+func pingLoop() {
+	t := time.NewTicker(5 * time.Minute)
+	defer t.Stop()
+	for range t.C {
+		checkPing()
+	}
+}
+
+// обработчик /api/status: отдаёт сохранённое состояние, сам проверку не делает
+func handleStatus(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	if s := pingStatus(); s == "pending" {
+		fmt.Fprint(w, `{"ok": null}`)
+	} else {
+		fmt.Fprintf(w, `{"ok": %t}`, s == "ok")
+	}
 }
 
 // basic auth middleware
