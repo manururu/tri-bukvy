@@ -1,0 +1,5 @@
+xray_clients:
+  - name: manururu
+    rev: 1
+  - name: lowen
+    rev: 1
