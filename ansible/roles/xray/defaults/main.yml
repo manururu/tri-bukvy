@@ -11,3 +11,45 @@ xray_logrotate_time: "00:00:00"
 
 # Конкретная версия Xray-core, напр. "v1.8.24"; пусто — ставить/обновлять до последней.
 xray_version: ""
+
+# ── Конфигурация ──────────────────────────────────────────────────────────
+# Роль рендерит config.json из переменных ниже. Секреты (соль, ключи Reality,
+# shortIds, путь XHTTP) роль только читает — они лежат в
+# inventory/host_vars/<хост>/vault.yml, правятся через ./vault.sh edit.
+
+xray_config_path: "/usr/local/etc/xray/config.json"
+
+# Официальный юнит запускает Xray под этим пользователем (User= в
+# /etc/systemd/system/xray.service). Конфиг с приватным ключом кладём
+# 0640 root:<группа>, что строже дефолтных 0644 от установщика.
+xray_service_group: "nogroup"
+
+xray_log_level: "warning"
+xray_listen: "0.0.0.0"
+
+# ── Инбаунд 1, основной: VLESS + XHTTP + REALITY ──────────────────────────
+# Нестандартный порт: connection-based policing ТСПУ навешивается на 443.
+# XHTTP разбивает поток на отдельные HTTP-транзакции и мультиплексирует их в
+# одно соединение — не даёт паттерна «N параллельных TLS к одному SNI».
+xray_xhttp_port: 47443
+xray_xhttp_dest: "www.samsung.com"
+
+# ── Инбаунд 2, запасной: VLESS + TCP + REALITY + Vision ───────────────────
+# Живёт на 443 — работает в сетях, где исходящий разрешён только на HTTPS.
+# Vision несовместим с mux, поэтому уязвимее к поведенческому детекту.
+#
+# Донор — эндпоинт раздачи драйверов: долгие объёмные сессии к нему выглядят
+# штатно. Apple/iCloud сюда брать нельзя, Xray на них ругается явно:
+# "REALITY: Choosing apple, icloud, etc. as the target may get your IP blocked".
+xray_vision_port: 443
+xray_vision_dest: "downloads.dell.com"
+
+# Резать приватные подсети из туннеля: клиент не должен ходить в LAN сервера
+# и в метаданные облака (169.254.169.254).
+xray_block_private: true
+xray_block_bittorrent: true
+
+# Пользователи: [{name: alice, rev: 1}, ...]
+# UUID не хранится, а выводится детерминированно из name+rev+xray_uuid_salt
+# (uuid5). Бампнуть rev — отозвать доступ и выдать новый UUID тому же имени.
+xray_clients: []
