@@ -44,6 +44,9 @@ xray_xhttp_dest: "www.samsung.com"
 xray_vision_port: 443
 xray_vision_dest: "downloads.dell.com"
 
+# uTLS-отпечаток для клиентских ссылок. chrome 133 отмечали как заблокированный.
+xray_client_fingerprint: "firefox"
+
 # Резать приватные подсети из туннеля: клиент не должен ходить в LAN сервера
 # и в метаданные облака (169.254.169.254).
 xray_block_private: true
@@ -53,3 +56,6 @@ xray_block_bittorrent: true
 # UUID не хранится, а выводится детерминированно из name+rev+xray_uuid_salt
 # (uuid5). Бампнуть rev — отозвать доступ и выдать новый UUID тому же имени.
 xray_clients: []
+
+# Куда на управляющей машине рендерятся клиентские ссылки (--tags links).
+xray_links_dir: "{{ playbook_dir }}/../out"

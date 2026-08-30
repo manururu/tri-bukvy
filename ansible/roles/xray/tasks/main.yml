@@ -64,3 +64,28 @@
     name: xray
     state: started
     enabled: true
+
+# Клиентские ссылки рендерятся на управляющей машине и только по явному
+# запросу: ansible-playbook playbooks/xray.yml --tags links
+# Обычный прогон их не трогает, чтобы не разбрасывать ключи по диску.
+- name: Ensure client links directory exists
+  ansible.builtin.file:
+    path: "{{ xray_links_dir }}"
+    state: directory
+    mode: "0700"
+  delegate_to: localhost
+  become: false
+  run_once: true
+  tags: [links, never]
+
+- name: Render client links
+  ansible.builtin.template:
+    src: client-links.j2
+    dest: "{{ xray_links_dir }}/{{ inventory_hostname }}-{{ item.name }}.txt"
+    mode: "0600"
+  delegate_to: localhost
+  become: false
+  loop: "{{ xray_clients }}"
+  loop_control:
+    label: "{{ item.name }}"
+  tags: [links, never]
