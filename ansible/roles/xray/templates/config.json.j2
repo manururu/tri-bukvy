@@ -1,0 +1,105 @@
+{#-
+  Конфиг Xray для {{ inventory_hostname }}.
+
+  Файл рендерится ролью xray — править его на сервере бесполезно, следующий
+  прогон плейбука перезапишет. Все параметры в roles/xray/defaults/main.yml,
+  секреты — в inventory/host_vars/{{ inventory_hostname }}/vault.yml.
+
+  UUID клиента не хранится нигде, а выводится детерминированно как
+  uuid5(name + rev + xray_uuid_salt).
+-#}
+{%- set xhttp_clients = [] -%}
+{%- set vision_clients = [] -%}
+{%- for c in xray_clients -%}
+{%-   set uid = (c.name ~ (c.rev | default(1)) ~ xray_uuid_salt) | to_uuid -%}
+{%-   set _ = xhttp_clients.append({'id': uid, 'email': c.name}) -%}
+{%-   set _ = vision_clients.append({'id': uid, 'email': c.name, 'flow': 'xtls-rprx-vision'}) -%}
+{%- endfor -%}
+{%- set rules = [] -%}
+{%- if xray_block_private -%}
+{%-   set _ = rules.append({'type': 'field', 'ip': ['geoip:private'], 'outboundTag': 'block'}) -%}
+{%- endif -%}
+{%- if xray_block_bittorrent -%}
+{%-   set _ = rules.append({'type': 'field', 'protocol': ['bittorrent'], 'outboundTag': 'block'}) -%}
+{%- endif -%}
+{
+  "log": {
+    "loglevel": "{{ xray_log_level }}",
+    "access": "/var/log/xray/access.log",
+    "error": "/var/log/xray/error.log"
+  },
+  "inbounds": [
+    {
+      "tag": "xhttp-reality",
+      "listen": "{{ xray_listen }}",
+      "port": {{ xray_xhttp_port }},
+      "protocol": "vless",
+      "settings": {
+        "clients": {{ xhttp_clients | to_json }},
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "xhttp",
+        "security": "reality",
+        "xhttpSettings": {
+          "host": "{{ xray_xhttp_dest }}",
+          "path": "{{ xray_xhttp_path }}",
+          "mode": "auto",
+          "xPaddingBytes": "100-1000"
+        },
+        "realitySettings": {
+          "show": false,
+          "dest": "{{ xray_xhttp_dest }}:443",
+          "xver": 0,
+          "serverNames": ["{{ xray_xhttp_dest }}"],
+          "privateKey": "{{ xray_reality_private_key }}",
+          "shortIds": {{ xray_short_ids | to_json }}
+        }
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls", "quic"]
+      }
+    },
+    {
+      "tag": "vision-reality",
+      "listen": "{{ xray_listen }}",
+      "port": {{ xray_vision_port }},
+      "protocol": "vless",
+      "settings": {
+        "clients": {{ vision_clients | to_json }},
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "show": false,
+          "dest": "{{ xray_vision_dest }}:443",
+          "xver": 0,
+          "serverNames": ["{{ xray_vision_dest }}"],
+          "privateKey": "{{ xray_reality_private_key }}",
+          "shortIds": {{ xray_short_ids | to_json }}
+        }
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls", "quic"]
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "tag": "direct",
+      "protocol": "freedom"
+    },
+    {
+      "tag": "block",
+      "protocol": "blackhole"
+    }
+  ],
+  "routing": {
+    "domainStrategy": "IPIfNonMatch",
+    "rules": {{ rules | to_json }}
+  }
+}

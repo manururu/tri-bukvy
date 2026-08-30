@@ -14,10 +14,19 @@ on:
           - users
           - basics
           - docker
+          - xray
 
       hosts:
         description: Host group or pattern to run on (e.g. web, vpn, all). Leave empty
           to use the playbook's hosts
+        required: false
+        type: string
+        default: ''
+
+      tags:
+        description: 'Ansible tags to run. For xray: "links" renders client configs
+          and uploads them as a job artifact instead of deploying. Leave empty to run
+          the whole playbook'
         required: false
         type: string
         default: ''
@@ -60,8 +69,41 @@ jobs:
       - name: Run playbook
         env:
           HOSTS_LIMIT: ${{ inputs.hosts }}
+          TAGS: ${{ inputs.tags }}
         run: ansible-playbook playbooks/${{ inputs.playbook }}.yml
           ${HOSTS_LIMIT:+--limit "$HOSTS_LIMIT"}
+          ${TAGS:+--tags "$TAGS"}
+
+      # Роль xray рендерит клиентские ссылки в ansible/out/ на самом раннере,
+      # поэтому без выгрузки они исчезнут вместе с ним. В ссылках рабочие ключи
+      # доступа, а артефакт может скачать любой с правом чтения репозитория —
+      # поэтому наружу уходит только симметрично зашифрованный архив, а
+      # открытые файлы удаляются здесь же.
+      # Расшифровать: gpg -d xray-client-links.tar.gz.gpg | tar -xzf -
+      - name: Encrypt rendered client configs
+        if: inputs.playbook == 'xray' && contains(inputs.tags, 'links')
+        env:
+          PASSPHRASE: ${{ secrets.ANSIBLE_XRAY_LINKS_PASSPHRASE }}
+        run: |
+          if [ -z "$PASSPHRASE" ]; then
+            echo "Не задан секрет ANSIBLE_XRAY_LINKS_PASSPHRASE — без него артефакт не зашифровать"
+            exit 1
+          fi
+          tar -czf "$RUNNER_TEMP/links.tar.gz" -C out .
+          rm -rf out && mkdir -p out
+          printf '%s' "$PASSPHRASE" | gpg --batch --pinentry-mode loopback \
+            --passphrase-fd 0 --symmetric --cipher-algo AES256 \
+            --output out/xray-client-links.tar.gz.gpg "$RUNNER_TEMP/links.tar.gz"
+          rm -f "$RUNNER_TEMP/links.tar.gz"
+
+      - name: Upload encrypted client configs
+        if: inputs.playbook == 'xray' && contains(inputs.tags, 'links')
+        uses: actions/upload-artifact@v4
+        with:
+          name: xray-client-links
+          path: ansible/out/xray-client-links.tar.gz.gpg
+          retention-days: 1
+          if-no-files-found: error
 
       - name: Remove vault password file
         if: always()

@@ -1,0 +1,23 @@
+{%- set uid = (item.name ~ (item.rev | default(1)) ~ xray_uuid_salt) | to_uuid -%}
+{%- set srv = ansible_host | default(inventory_hostname) -%}
+{%- set sid = xray_short_ids | first -%}
+{%- set fp = xray_client_fingerprint -%}
+# Xray — {{ item.name }} (rev {{ item.rev | default(1) }})
+# Сервер: {{ inventory_hostname }} ({{ srv }})
+#
+# Сгенерировано ролью xray из host_vars. Файл содержит рабочие ключи доступа —
+# не коммитить, передавать только по защищённому каналу.
+# Отозвать доступ: поднять rev у этого имени в vault и прогнать плейбук.
+
+## 1. Основной — VLESS + XHTTP + REALITY, порт {{ xray_xhttp_port }}
+##    Клиенты: v2rayNG, Happ, v2RayTun (Android), Streisand, Happ (iOS),
+##    v2rayN, Hiddify (Windows), Happ, V2Box (macOS), sing-box (Linux).
+##    НЕ работает в NekoBox/Nekoray — там открытый баг с XHTTP.
+
+vless://{{ uid }}@{{ srv }}:{{ xray_xhttp_port }}?encryption=none&security=reality&sni={{ xray_xhttp_dest }}&fp={{ fp }}&pbk={{ xray_reality_public_key }}&sid={{ sid }}&type=xhttp&host={{ xray_xhttp_dest }}&path={{ xray_xhttp_path | urlencode | replace('/', '%2F') }}&mode=auto#{{ inventory_hostname }}-xhttp-{{ item.name }}
+
+## 2. Запасной — VLESS + TCP + REALITY + Vision, порт {{ xray_vision_port }}
+##    Пригодится там, где исходящий трафик разрешён только на 443
+##    (корпоративные и гостевые сети). Работает в любом Xray-клиенте.
+
+vless://{{ uid }}@{{ srv }}:{{ xray_vision_port }}?encryption=none&security=reality&sni={{ xray_vision_dest }}&fp={{ fp }}&pbk={{ xray_reality_public_key }}&sid={{ sid }}&type=tcp&flow=xtls-rprx-vision#{{ inventory_hostname }}-vision-{{ item.name }}

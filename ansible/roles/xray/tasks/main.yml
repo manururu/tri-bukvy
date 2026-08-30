@@ -1,0 +1,91 @@
+---
+# Установка и обновление Xray-core и geodata (geoip.dat, geosite.dat) официальным
+# скриптом Xray-install: https://github.com/XTLS/Xray-install
+#   install          — Install & Upgrade Xray-core и geodata (повторный запуск обновляет)
+#   --logrotate TIME — плюс ежедневная ротация логов через logrotate@xray.timer
+# Скрипт работает только от root; become задаёт плейбук.
+#
+# Конфигом роль управляет сама: рендерит config.json из defaults + host_vars,
+# при первой установке скрипт кладёт заглушку "{}", которую мы перезаписываем.
+
+- name: Assert required xray variables are present
+  ansible.builtin.assert:
+    that:
+      - xray_uuid_salt | default('', true) | length > 0
+      - xray_reality_private_key | default('', true) | length > 0
+      - xray_reality_public_key | default('', true) | length > 0
+      - xray_xhttp_path | default('', true) | length > 0
+      - xray_short_ids | default([], true) | length > 0
+      - xray_clients | length > 0
+    fail_msg: >-
+      Не хватает переменных роли xray. Секреты (xray_uuid_salt,
+      xray_reality_private_key, xray_reality_public_key, xray_short_ids,
+      xray_xhttp_path) должны лежать в
+      inventory/host_vars/{{ inventory_hostname }}/vault.yml,
+      список пользователей — в xray_clients. Правится через ./vault.sh edit.
+    quiet: true
+  tags: always
+
+- name: Download Xray install script
+  ansible.builtin.get_url:
+    url: "{{ xray_install_script_url }}"
+    dest: "{{ xray_install_script_path }}"
+    mode: "0755"
+  changed_when: false
+
+- name: Install or upgrade Xray-core with geodata and logrotate
+  ansible.builtin.command:
+    cmd: >-
+      bash {{ xray_install_script_path }} install
+      --logrotate {{ xray_logrotate_time }}
+      {{ '--version ' ~ xray_version if xray_version else '' }}
+  register: xray_install_result
+  # Скрипт выходит с rc 0 и в том случае, когда обновление не нужно.
+  changed_when:
+    - '"No new version" not in xray_install_result.stdout'
+    - '"same as the specified version" not in xray_install_result.stdout'
+
+# Установщик создаёт config.json как root:root 0644, а юнит запускает Xray под
+# nobody. В файле лежит приватный ключ Reality, поэтому режем до 0640 и отдаём
+# группе сервиса — читать может только он.
+# validate не даст положить сломанный конфиг и уронить работающий туннель.
+- name: Deploy Xray config
+  ansible.builtin.template:
+    src: config.json.j2
+    dest: "{{ xray_config_path }}"
+    owner: root
+    group: "{{ xray_service_group }}"
+    mode: "0640"
+    validate: "/usr/local/bin/xray run -test -c %s"
+  notify: Restart xray
+
+- name: Ensure xray is enabled and running
+  ansible.builtin.service:
+    name: xray
+    state: started
+    enabled: true
+
+# Клиентские ссылки рендерятся на управляющей машине и только по явному
+# запросу: ansible-playbook playbooks/xray.yml --tags links
+# Обычный прогон их не трогает, чтобы не разбрасывать ключи по диску.
+- name: Ensure client links directory exists
+  ansible.builtin.file:
+    path: "{{ xray_links_dir }}"
+    state: directory
+    mode: "0700"
+  delegate_to: localhost
+  become: false
+  run_once: true
+  tags: [links, never]
+
+- name: Render client links
+  ansible.builtin.template:
+    src: client-links.j2
+    dest: "{{ xray_links_dir }}/{{ inventory_hostname }}-{{ item.name }}.txt"
+    mode: "0600"
+  delegate_to: localhost
+  become: false
+  loop: "{{ xray_clients }}"
+  loop_control:
+    label: "{{ item.name }}"
+  tags: [links, never]
